@@ -1,8 +1,8 @@
 # Evaluacion_JavaFX_CitasTecnicas
 
-Integrantes
+Integrantes / G5
 
-Andrés Sebastián González Maradiaga - g-nzaan
-William Antonio García García - Wigar03
-Rafael Hernández Sánchez - rafaelhs07
-Caleb Jordan Tardencilla Alvarado
+- Andrés Sebastián González Maradiaga - g-nzaan
+- William Antonio García García - Wigar03
+- Rafael Hernández Sánchez - rafaelhs07
+- Caleb Jordan Tardencilla Alvarado
