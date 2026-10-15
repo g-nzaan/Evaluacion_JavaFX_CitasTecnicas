@@ -98,7 +98,82 @@ public class ClienteDAO {
             System.err.println("Error al eliminar cliente: " + e.getMessage());
             return false;
         }
+    }
 
+    public boolean existeCorreo(String correo, int idExcluir) {
+        String sql = "SELECT COUNT(*) FROM cliente WHERE LOWER(correo) = LOWER(?) AND id <> ?";
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, correo.trim());
+            pstmt.setInt(2, idExcluir);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al verificar existencia de correo: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean tieneCitasAsociadas(int clienteId) {
+        String sql = "SELECT COUNT(*) FROM cita_tecnica WHERE cliente_id = ?";
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, clienteId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al verificar citas asociadas: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Busca clientes por coincidencia parcial en nombres, apellidos o correo
+     * sin distinguir mayúsculas ni minúsculas usando PreparedStatement (RF05).
+     *
+     * @param criterio Texto o término a buscar.
+     * @return ObservableList de clientes que coinciden con el criterio.
+     */
+    public ObservableList<Cliente> buscarClientes(String criterio) {
+        ObservableList<Cliente> listaResultado = FXCollections.observableArrayList();
+        String sql = "SELECT id, nombres, apellidos, telefono, correo, activo FROM cliente "
+                   + "WHERE LOWER(nombres) LIKE ? OR LOWER(apellidos) LIKE ? OR LOWER(correo) LIKE ? "
+                   + "ORDER BY id ASC";
+
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            String parametro = "%" + (criterio == null ? "" : criterio.trim().toLowerCase()) + "%";
+            pstmt.setString(1, parametro);
+            pstmt.setString(2, parametro);
+            pstmt.setString(3, parametro);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Cliente cliente = new Cliente(
+                            rs.getInt("id"),
+                            rs.getString("nombres"),
+                            rs.getString("apellidos"),
+                            rs.getString("telefono"),
+                            rs.getString("correo"),
+                            rs.getBoolean("activo")
+                    );
+                    listaResultado.add(cliente);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al buscar clientes: " + e.getMessage());
+        }
+        return listaResultado;
     }
 
 }
