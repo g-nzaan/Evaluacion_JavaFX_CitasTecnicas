@@ -2,117 +2,89 @@ package com.tecnoasistencia.modelo;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-
-/** Contrato de integración propuesto para coordinar con el integrante 3. */
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 /**
- * Representa la entidad de Cita Técnica en el sistema TecnoAsistencia.
- * Mantiene correspondencia con la tabla 'cita_tecnica' en la base de datos PostgreSQL,
- * e incluye el nombre del cliente para facilitar el enlace con vistas JavaFX (TableView).
+ * Representa la entidad de Cita Técnica en el sistema TecnoAsistencia Nicaragua S.A.
+ * Mapea directamente la tabla 'cita_tecnica' en PostgreSQL según el modelo obligatorio de la rúbrica:
+ * - id INT PK AUTO_INCREMENT
+ * - cliente_id INT NOT NULL FK a cliente.id
+ * - fecha DATE NOT NULL
+ * - hora TIME NOT NULL
+ * - tipo_servicio VARCHAR(80) NOT NULL
+ * - descripcion VARCHAR(255) NOT NULL
+ * - estado VARCHAR(20) NOT NULL (Pendiente, En proceso, Finalizada, Cancelada)
  */
 public class CitaTecnica {
+
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm");
+
     private int id;
     private int clienteId;
-    private String nombreCliente;
+    private String nombreCliente; // Obtenido vía JOIN con cliente (nombres || ' ' || apellidos)
     private LocalDate fecha;
     private LocalTime hora;
-    private String servicio;
+    private String tipoServicio;
+    private String descripcion;
     private String estado;
 
-    public CitaTecnica() { }
+    /**
+     * Constructor por defecto. Asigna el estado inicial en "Pendiente".
+     */
+    public CitaTecnica() {
+        this.estado = EstadoCita.PENDIENTE.getDescripcion();
+    }
+
+    /**
+     * Constructor para nuevas citas antes de su inserción en la base de datos.
+     */
+    public CitaTecnica(int clienteId, LocalDate fecha, LocalTime hora,
+                       String tipoServicio, String descripcion, String estado) {
+        this.clienteId = clienteId;
+        this.fecha = fecha;
+        this.hora = hora;
+        this.tipoServicio = tipoServicio;
+        this.descripcion = descripcion;
+        this.estado = estado != null ? estado : EstadoCita.PENDIENTE.getDescripcion();
+    }
+
+    /**
+     * Constructor completo para persistencia sin nombre de cliente.
+     */
+    public CitaTecnica(int id, int clienteId, LocalDate fecha, LocalTime hora,
+                       String tipoServicio, String descripcion, String estado) {
+        this.id = id;
+        this.clienteId = clienteId;
+        this.fecha = fecha;
+        this.hora = hora;
+        this.tipoServicio = tipoServicio;
+        this.descripcion = descripcion;
+        this.estado = estado != null ? estado : EstadoCita.PENDIENTE.getDescripcion();
+    }
+
+    /**
+     * Constructor completo para visualización con JOIN con la tabla cliente (RF03, RF04).
+     */
     public CitaTecnica(int id, int clienteId, String nombreCliente, LocalDate fecha,
-                       LocalTime hora, String servicio, String estado) {
+                       LocalTime hora, String tipoServicio, String descripcion, String estado) {
         this.id = id;
         this.clienteId = clienteId;
         this.nombreCliente = nombreCliente;
         this.fecha = fecha;
         this.hora = hora;
-        this.servicio = servicio;
-        this.estado = estado;
-    }
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
-    public int getClienteId() { return clienteId; }
-    public void setClienteId(int clienteId) { this.clienteId = clienteId; }
-    public String getNombreCliente() { return nombreCliente; }
-    public void setNombreCliente(String nombreCliente) { this.nombreCliente = nombreCliente; }
-    public LocalDate getFecha() { return fecha; }
-    public void setFecha(LocalDate fecha) { this.fecha = fecha; }
-    public LocalTime getHora() { return hora; }
-    public void setHora(LocalTime hora) { this.hora = hora; }
-    public String getServicio() { return servicio; }
-    public void setServicio(String servicio) { this.servicio = servicio; }
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
-}
-    private static final DateTimeFormatter FORMATO_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
-    private int id;
-    private int clienteId;
-    private String clienteNombre; // Campo informativo obtenido vía JOIN con la tabla cliente
-    private LocalDateTime fechaHora;
-    private String motivo;
-    private EstadoCita estado;
-
-    /**
-     * Constructor por defecto. Inicializa el estado en Pendiente por convención.
-     */
-    public CitaTecnica() {
-        this.estado = EstadoCita.PENDIENTE;
+        this.tipoServicio = tipoServicio;
+        this.descripcion = descripcion;
+        this.estado = estado != null ? estado : EstadoCita.PENDIENTE.getDescripcion();
     }
 
     /**
-     * Constructor para registrar nuevas citas (sin ID ni nombre de cliente aún asignados).
-     *
-     * @param clienteId Identificador del cliente existente.
-     * @param fechaHora Fecha y hora programada para la cita.
-     * @param motivo Descripción o causa de la solicitud técnica.
-     * @param estado Estado inicial de la cita.
+     * Constructor de compatibilidad para consultas simplificadas.
      */
-    public CitaTecnica(int clienteId, LocalDateTime fechaHora, String motivo, EstadoCita estado) {
-        this.clienteId = clienteId;
-        this.fechaHora = fechaHora;
-        this.motivo = motivo;
-        this.estado = estado != null ? estado : EstadoCita.PENDIENTE;
-    }
-
-    /**
-     * Constructor completo para citas recuperadas de la base de datos sin JOIN de cliente.
-     *
-     * @param id Identificador único de la cita técnica.
-     * @param clienteId Identificador del cliente asociado.
-     * @param fechaHora Fecha y hora programada.
-     * @param motivo Descripción o causa del servicio técnico.
-     * @param estado Estado actual de la cita.
-     */
-    public CitaTecnica(int id, int clienteId, LocalDateTime fechaHora, String motivo, EstadoCita estado) {
-        this.id = id;
-        this.clienteId = clienteId;
-        this.fechaHora = fechaHora;
-        this.motivo = motivo;
-        this.estado = estado != null ? estado : EstadoCita.PENDIENTE;
-    }
-
-    /**
-     * Constructor completo para consultas con JOIN (incluye el nombre completo del cliente).
-     *
-     * @param id Identificador único de la cita técnica.
-     * @param clienteId Identificador del cliente asociado.
-     * @param clienteNombre Nombre y apellido concatenados del cliente.
-     * @param fechaHora Fecha y hora programada.
-     * @param motivo Descripción del motivo del servicio técnico.
-     * @param estado Estado actual de la cita.
-     */
-    public CitaTecnica(int id, int clienteId, String clienteNombre, LocalDateTime fechaHora, String motivo, EstadoCita estado) {
-        this.id = id;
-        this.clienteId = clienteId;
-        this.clienteNombre = clienteNombre;
-        this.fechaHora = fechaHora;
-        this.motivo = motivo;
-        this.estado = estado != null ? estado : EstadoCita.PENDIENTE;
+    public CitaTecnica(int id, int clienteId, String nombreCliente, LocalDate fecha,
+                       LocalTime hora, String tipoServicio, String estado) {
+        this(id, clienteId, nombreCliente, fecha, hora, tipoServicio, tipoServicio, estado);
     }
 
     // ==========================================
@@ -135,61 +107,83 @@ public class CitaTecnica {
         this.clienteId = clienteId;
     }
 
-    public String getClienteNombre() {
-        return clienteNombre;
+    public String getNombreCliente() {
+        return nombreCliente;
     }
 
-    public void setClienteNombre(String clienteNombre) {
-        this.clienteNombre = clienteNombre;
+    public void setNombreCliente(String nombreCliente) {
+        this.nombreCliente = nombreCliente;
     }
 
-    public LocalDateTime getFechaHora() {
-        return fechaHora;
+    public LocalDate getFecha() {
+        return fecha;
     }
 
-    public void setFechaHora(LocalDateTime fechaHora) {
-        this.fechaHora = fechaHora;
+    public void setFecha(LocalDate fecha) {
+        this.fecha = fecha;
     }
 
-    public String getMotivo() {
-        return motivo;
+    public LocalTime getHora() {
+        return hora;
     }
 
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
+    public void setHora(LocalTime hora) {
+        this.hora = hora;
     }
 
-    public EstadoCita getEstado() {
+    public String getTipoServicio() {
+        return tipoServicio;
+    }
+
+    public void setTipoServicio(String tipoServicio) {
+        this.tipoServicio = tipoServicio;
+    }
+
+    /**
+     * Alias de tipoServicio para compatibilidad con RF04 (columna "Servicio" en TableView).
+     */
+    public String getServicio() {
+        return tipoServicio;
+    }
+
+    public void setServicio(String servicio) {
+        this.tipoServicio = servicio;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public String getEstado() {
         return estado;
     }
 
-    public void setEstado(EstadoCita estado) {
+    public void setEstado(String estado) {
         this.estado = estado;
     }
 
-    // ==========================================
-    // MÉTODOS DE CONVENIENCIA PARA JAVAFX
-    // ==========================================
-
-    /**
-     * Retorna la representación en texto del estado para PropertyValueFactory de JavaFX.
-     */
-    public String getEstadoStr() {
-        return estado != null ? estado.getDescripcion() : "";
+    public EstadoCita getEstadoEnum() {
+        return estado != null ? EstadoCita.fromDescripcion(estado) : null;
     }
 
-    /**
-     * Asigna el estado a partir de su descripción textual, validándolo contra EstadoCita.
-     */
-    public void setEstadoStr(String estadoStr) {
-        this.estado = EstadoCita.fromDescripcion(estadoStr);
+    public void setEstadoEnum(EstadoCita estadoEnum) {
+        this.estado = estadoEnum != null ? estadoEnum.getDescripcion() : null;
     }
 
-    /**
-     * Retorna la fecha y hora formateada en formato legible (dd/MM/yyyy HH:mm) para TableView.
-     */
-    public String getFechaHoraFormateada() {
-        return fechaHora != null ? fechaHora.format(FORMATO_FECHA_HORA) : "";
+    // ==========================================
+    // MÉTODOS DE FORMATO PARA JAVAFX
+    // ==========================================
+
+    public String getFechaFormateada() {
+        return fecha != null ? fecha.format(FORMATO_FECHA) : "";
+    }
+
+    public String getHoraFormateada() {
+        return hora != null ? hora.format(FORMATO_HORA) : "";
     }
 
     @Override
@@ -207,13 +201,7 @@ public class CitaTecnica {
 
     @Override
     public String toString() {
-        return "CitaTecnica{" +
-                "id=" + id +
-                ", clienteId=" + clienteId +
-                ", clienteNombre='" + clienteNombre + '\'' +
-                ", fechaHora=" + getFechaHoraFormateada() +
-                ", motivo='" + motivo + '\'' +
-                ", estado=" + (estado != null ? estado.getDescripcion() : "null") +
-                '}';
+        return "Cita #" + id + " - " + (nombreCliente != null ? nombreCliente : "Cliente " + clienteId)
+                + " (" + getFechaFormateada() + " " + getHoraFormateada() + " - " + estado + ")";
     }
 }
