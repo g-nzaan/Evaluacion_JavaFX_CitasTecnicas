@@ -9,9 +9,15 @@ import java.sql.*;
 
 public class ClienteDAO {
 
+    private Connection abrirConexion() throws SQLException {
+        Connection conexion = ConexionDB.conectar();
+        if (conexion == null) throw new SQLException("No se pudo conectar con PostgreSQL.");
+        return conexion;
+    }
+
     public boolean insertarCliente(Cliente cliente){
         String sql = "INSERT INTO cliente (nombres, apellidos, telefono, correo, activo) VALUES (?, ?, ?, ?, ?)";
-        try (Connection conn = ConexionDB.conectar();
+        try (Connection conn = abrirConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, cliente.getNombres());
@@ -20,8 +26,7 @@ public class ClienteDAO {
             pstmt.setString(4, cliente.getCorreo());
             pstmt.setBoolean(5, cliente.isActivo());
 
-            pstmt.executeUpdate();
-            return true;
+            return pstmt.executeUpdate() == 1;
         } catch (SQLException e){
             System.err.println("Error al insertar cliente: " + e.getMessage());
             return false;
@@ -32,7 +37,7 @@ public class ClienteDAO {
         ObservableList<Cliente> listaClientes = FXCollections.observableArrayList();
         String sql = "SELECT id, nombres, apellidos, telefono, correo, activo FROM cliente";
 
-        try (Connection conn = ConexionDB.conectar();
+        try (Connection conn = abrirConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)){
             while (rs.next()){
@@ -47,15 +52,15 @@ public class ClienteDAO {
                 listaClientes.add(cliente);
             }
         } catch (SQLException e){
-            System.err.println("Error al listar clientes: " + e.getMessage());
+            throw new IllegalStateException("Error al listar clientes: ", e);
         }
         return listaClientes;
     }
 
     public boolean actualizarCliente(Cliente cliente){
         String sql ="UPDATE cliente SET nombres = ?, apellidos = ?, telefono = ?, correo = ?, activo = ? WHERE id = ?";
-        try (Connection conn = ConexionDB.conectar();
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = abrirConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, cliente.getNombres());
             pstmt.setString(2, cliente.getApellidos());
@@ -64,8 +69,7 @@ public class ClienteDAO {
             pstmt.setBoolean(5, cliente.isActivo());
             pstmt.setInt(6, cliente.getId());
 
-            pstmt.executeUpdate();
-            return true;
+            return pstmt.executeUpdate() == 1;
 
         } catch (SQLException e){
             System.err.println("Error al actualizar cliente: " + e.getMessage());
@@ -77,7 +81,7 @@ public class ClienteDAO {
         String sqlVerificarCitas = "SELECT COUNT(*) FROM cita_tecnica WHERE cliente_id = ?";
         String sqlEliminar = "DELETE FROM cliente WHERE id = ?";
 
-        try (Connection conn = ConexionDB.conectar();
+        try (Connection conn = abrirConexion();
              PreparedStatement pstmtVerificar = conn.prepareStatement(sqlVerificarCitas)){
 
             pstmtVerificar.setInt(1, clienteId);
@@ -90,8 +94,7 @@ public class ClienteDAO {
 
             try (PreparedStatement pstmtEliminar = conn.prepareStatement(sqlEliminar)){
                 pstmtEliminar.setInt(1, clienteId);
-                pstmtEliminar.executeUpdate();
-                return true;
+                return pstmtEliminar.executeUpdate() == 1;
             }
 
         } catch (SQLException e) {
@@ -101,8 +104,8 @@ public class ClienteDAO {
     }
 
     public boolean existeCorreo(String correo, int idExcluir) {
-        String sql = "SELECT COUNT(*) FROM cliente WHERE LOWER(correo) = LOWER(?) AND id <> ?";
-        try (Connection conn = ConexionDB.conectar();
+        String sql = "SELECT COUNT(*) FROM cliente WHERE LOWER(TRIM(correo)) = LOWER(TRIM(?)) AND id <> ?";
+        try (Connection conn = abrirConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, correo.trim());
@@ -114,14 +117,14 @@ public class ClienteDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al verificar existencia de correo: " + e.getMessage());
+            throw new IllegalStateException("Error al verificar existencia de correo: ", e);
         }
         return false;
     }
 
     public boolean tieneCitasAsociadas(int clienteId) {
         String sql = "SELECT COUNT(*) FROM cita_tecnica WHERE cliente_id = ?";
-        try (Connection conn = ConexionDB.conectar();
+        try (Connection conn = abrirConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, clienteId);
@@ -131,7 +134,7 @@ public class ClienteDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al verificar citas asociadas: " + e.getMessage());
+            throw new IllegalStateException("Error al verificar citas asociadas: ", e);
         }
         return false;
     }
@@ -146,10 +149,10 @@ public class ClienteDAO {
     public ObservableList<Cliente> buscarClientes(String criterio) {
         ObservableList<Cliente> listaResultado = FXCollections.observableArrayList();
         String sql = "SELECT id, nombres, apellidos, telefono, correo, activo FROM cliente "
-                   + "WHERE LOWER(nombres) LIKE ? OR LOWER(apellidos) LIKE ? OR LOWER(correo) LIKE ? "
-                   + "ORDER BY id ASC";
+                + "WHERE LOWER(nombres) LIKE ? OR LOWER(apellidos) LIKE ? OR LOWER(correo) LIKE ? "
+                + "ORDER BY id ASC";
 
-        try (Connection conn = ConexionDB.conectar();
+        try (Connection conn = abrirConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             String parametro = "%" + (criterio == null ? "" : criterio.trim().toLowerCase()) + "%";
@@ -171,7 +174,7 @@ public class ClienteDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al buscar clientes: " + e.getMessage());
+            throw new IllegalStateException("Error al buscar clientes: ", e);
         }
         return listaResultado;
     }
