@@ -7,6 +7,8 @@ import javafx.animation.ScaleTransition;
 import javafx.animation.TranslateTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -164,12 +166,12 @@ public class ClienteController implements Initializable {
     private Label lblContador;
 
     private ClienteDAO clienteDAO;
-    private ObservableList<Cliente> listaClientes;
+    private final ObservableList<Cliente> listaClientes = FXCollections.observableArrayList();
+    private final FilteredList<Cliente> clientesFiltrados = new FilteredList<>(listaClientes, c -> true);
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         clienteDAO = new ClienteDAO();
-        listaClientes = FXCollections.observableArrayList();
 
         configurarDisenoVisualJavaFX();
         configurarAnimacionesJavaFX();
@@ -177,7 +179,12 @@ public class ClienteController implements Initializable {
         configurarSeleccionTabla();
         configurarFiltrosEntrada();
         configurarBusqueda();
+
+        SortedList<Cliente> clientesOrdenados = new SortedList<>(clientesFiltrados);
+        clientesOrdenados.comparatorProperty().bind(tblClientes.comparatorProperty());
+        tblClientes.setItems(clientesOrdenados);
         tblClientes.setPlaceholder(new Label("No se encontraron clientes registrados o que coincidan con la búsqueda."));
+
         cargarClientes();
     }
 
@@ -238,9 +245,10 @@ public class ClienteController implements Initializable {
      */
     public void cargarClientes() {
         try {
-            listaClientes = clienteDAO.listarClientes();
-            tblClientes.setItems(listaClientes);
-            actualizarContador(listaClientes.size());
+            ObservableList<Cliente> desdeDB = clienteDAO.listarClientes();
+            listaClientes.setAll(desdeDB);
+            clientesFiltrados.setPredicate(c -> true);
+            actualizarContador(clientesFiltrados.size());
             animarCargaTabla();
         } catch (IllegalStateException e) {
             Alertas.errorDatos(e);
@@ -487,6 +495,7 @@ public class ClienteController implements Initializable {
 
         if (insertado) {
             mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente registrado exitosamente.");
+            txtBuscar.clear();
             limpiarFormulario();
             cargarClientes();
         } else {
@@ -520,6 +529,7 @@ public class ClienteController implements Initializable {
 
         if (actualizado) {
             mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente actualizado exitosamente.");
+            txtBuscar.clear();
             limpiarFormulario();
             cargarClientes();
         } else {
@@ -659,6 +669,7 @@ public class ClienteController implements Initializable {
             boolean eliminado = clienteDAO.eliminarCliente(id);
             if (eliminado) {
                 mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente eliminado exitosamente.");
+                txtBuscar.clear();
                 limpiarFormulario();
                 cargarClientes();
             } else {
@@ -670,38 +681,52 @@ public class ClienteController implements Initializable {
     }
 
     /**
-     * Configura el listener dinámico en el campo de texto de búsqueda para filtrar en tiempo real (RF05).
+     * Configura el listener dinámico en el campo de texto para filtrar en tiempo real en memoria (RF05).
+     * Evita saturar la conexión a PostgreSQL con una consulta por cada tecla.
      */
     private void configurarBusqueda() {
         txtBuscar.textProperty().addListener((observable, oldValue, newValue) -> {
-            ejecutarBusqueda(newValue);
+            aplicarFiltroMemoria(newValue);
         });
     }
 
     /**
-     * Ejecuta la consulta de búsqueda de clientes mediante ClienteDAO (RF05).
+     * Aplica el predicado de búsqueda reactiva en memoria sobre FilteredList.
      */
-    private void ejecutarBusqueda(String criterio) {
-        try {
-            if (criterio == null || criterio.trim().isEmpty()) {
-                cargarClientes();
-            } else {
-                listaClientes = clienteDAO.buscarClientes(criterio);
-                tblClientes.setItems(listaClientes);
-                actualizarContador(listaClientes.size());
-                animarCargaTabla();
-            }
-        } catch (IllegalStateException e) {
-            Alertas.errorDatos(e);
+    private void aplicarFiltroMemoria(String criterio) {
+        if (criterio == null || criterio.isBlank()) {
+            clientesFiltrados.setPredicate(c -> true);
+        } else {
+            String c = criterio.trim().toLowerCase();
+            clientesFiltrados.setPredicate(cliente ->
+                    (cliente.getNombres() != null && cliente.getNombres().toLowerCase().contains(c))
+                    || (cliente.getApellidos() != null && cliente.getApellidos().toLowerCase().contains(c))
+                    || (cliente.getCorreo() != null && cliente.getCorreo().toLowerCase().contains(c))
+            );
         }
+        actualizarContador(clientesFiltrados.size());
     }
 
     /**
-     * Manejador del botón Buscar (RF05).
+     * Manejador del botón Buscar (o pulsar Enter en txtBuscar) (RF05).
+     * Ejecuta la consulta directa con PreparedStatement contra PostgreSQL.
      */
     @FXML
     private void handleBuscar(ActionEvent event) {
-        ejecutarBusqueda(txtBuscar.getText());
+        String criterio = txtBuscar.getText() != null ? txtBuscar.getText().trim() : "";
+        if (criterio.isEmpty()) {
+            cargarClientes();
+        } else {
+            try {
+                ObservableList<Cliente> resultadoDB = clienteDAO.buscarClientes(criterio);
+                listaClientes.setAll(resultadoDB);
+                clientesFiltrados.setPredicate(c -> true);
+                actualizarContador(resultadoDB.size());
+                animarCargaTabla();
+            } catch (IllegalStateException e) {
+                Alertas.errorDatos(e);
+            }
+        }
     }
 
     /**

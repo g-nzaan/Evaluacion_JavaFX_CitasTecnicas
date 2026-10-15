@@ -136,7 +136,7 @@
                             <children>
                                 <Label fx:id="lblBuscar" text="Búsqueda:"/>
                                 <TextField fx:id="txtBuscar" promptText="Buscar por nombres, apellidos o correo..."
-                                           HBox.hgrow="ALWAYS"/>
+                                           HBox.hgrow="ALWAYS" onAction="#handleBuscar"/>
                                 <Button fx:id="btnBuscar" text="Buscar" onAction="#handleBuscar"/>
                                 <Button fx:id="btnLimpiarBusqueda" text="Restablecer" onAction="#handleLimpiarBusqueda"/>
                             </children>
