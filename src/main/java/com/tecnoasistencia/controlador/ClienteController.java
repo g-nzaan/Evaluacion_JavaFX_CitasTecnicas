@@ -4,6 +4,7 @@ import com.tecnoasistencia.dao.ClienteDAO;
 import com.tecnoasistencia.modelo.Cliente;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
+import javafx.animation.TranslateTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -12,6 +13,8 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -40,12 +43,15 @@ import javafx.util.Duration;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 
 /**
  * Controlador de la vista de clientes (cliente-view.fxml).
  * Configura diseño visual y animaciones con JavaFX nativo puro (sin CSS externo).
  */
 public class ClienteController implements Initializable {
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     @FXML
     private BorderPane rootPane;
@@ -166,6 +172,7 @@ public class ClienteController implements Initializable {
         configurarDisenoVisualJavaFX();
         configurarAnimacionesJavaFX();
         configurarColumnasTabla();
+        configurarSeleccionTabla();
         cargarClientes();
     }
 
@@ -387,20 +394,227 @@ public class ClienteController implements Initializable {
         });
     }
 
+    /**
+     * Animación de sacudida (JavaFX TranslateTransition) cuando un campo falla la validación.
+     */
+    private void animarError(Node nodo) {
+        if (nodo == null) return;
+        TranslateTransition shake = new TranslateTransition(Duration.millis(50), nodo);
+        shake.setByX(8);
+        shake.setCycleCount(6);
+        shake.setAutoReverse(true);
+        shake.setOnFinished(e -> nodo.setTranslateX(0));
+        shake.playFromStart();
+    }
+
+    /**
+     * Animación sutil de realce (JavaFX FadeTransition) al seleccionar un registro.
+     */
+    private void animarSeleccionFormulario() {
+        if (panelFormulario == null) return;
+        FadeTransition ft = new FadeTransition(Duration.millis(200), panelFormulario);
+        ft.setFromValue(0.7);
+        ft.setToValue(1.0);
+        ft.playFromStart();
+    }
+
+    /**
+     * Configura el listener de selección de la tabla para poblar el formulario (RF02).
+     */
+    private void configurarSeleccionTabla() {
+        tblClientes.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, nuevoCliente) -> {
+            if (nuevoCliente != null) {
+                cargarClienteEnFormulario(nuevoCliente);
+                animarSeleccionFormulario();
+            }
+        });
+    }
+
+    /**
+     * Carga los datos del cliente seleccionado en los campos del formulario.
+     */
+    private void cargarClienteEnFormulario(Cliente cliente) {
+        txtId.setText(String.valueOf(cliente.getId()));
+        txtNombres.setText(cliente.getNombres());
+        txtApellidos.setText(cliente.getApellidos());
+        txtTelefono.setText(cliente.getTelefono());
+        txtCorreo.setText(cliente.getCorreo());
+        chkActivo.setSelected(cliente.isActivo());
+
+        btnGuardar.setDisable(true);
+        btnActualizar.setDisable(false);
+        btnEliminar.setDisable(false);
+    }
+
+    /**
+     * Registra un nuevo cliente validando campos obligatorios y formato de correo (RF02, RF07).
+     */
     @FXML
     private void handleGuardar(ActionEvent event) {
+        if (!validarFormulario(false)) {
+            return;
+        }
+
+        String nombres = txtNombres.getText().trim();
+        String apellidos = txtApellidos.getText().trim();
+        String telefono = txtTelefono.getText().trim();
+        String correo = txtCorreo.getText().trim();
+        boolean activo = chkActivo.isSelected();
+
+        Cliente nuevoCliente = new Cliente(nombres, apellidos, telefono, correo, activo);
+        boolean insertado = clienteDAO.insertarCliente(nuevoCliente);
+
+        if (insertado) {
+            mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente registrado exitosamente.");
+            limpiarFormulario();
+            cargarClientes();
+        } else {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Inserción", "No se pudo registrar el cliente. Verifique la conexión a la base de datos.");
+        }
     }
 
+    /**
+     * Actualiza la información de un cliente existente (RF02, RF07).
+     */
     @FXML
     private void handleActualizar(ActionEvent event) {
+        if (txtId.getText() == null || txtId.getText().trim().isEmpty()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Selección Requerida", "Debe seleccionar un cliente de la tabla para modificarlo.");
+            return;
+        }
+
+        if (!validarFormulario(true)) {
+            return;
+        }
+
+        int id = Integer.parseInt(txtId.getText().trim());
+        String nombres = txtNombres.getText().trim();
+        String apellidos = txtApellidos.getText().trim();
+        String telefono = txtTelefono.getText().trim();
+        String correo = txtCorreo.getText().trim();
+        boolean activo = chkActivo.isSelected();
+
+        Cliente clienteModificado = new Cliente(id, nombres, apellidos, telefono, correo, activo);
+        boolean actualizado = clienteDAO.actualizarCliente(clienteModificado);
+
+        if (actualizado) {
+            mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente actualizado exitosamente.");
+            limpiarFormulario();
+            cargarClientes();
+        } else {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Actualización", "No se pudo actualizar el cliente. Verifique la conexión a la base de datos.");
+        }
     }
 
-    @FXML
-    private void handleEliminar(ActionEvent event) {
-    }
-
+    /**
+     * Limpia los campos del formulario y restablece el estado de los botones.
+     */
     @FXML
     private void handleLimpiar(ActionEvent event) {
+        limpiarFormulario();
+    }
+
+    private void limpiarFormulario() {
+        txtId.clear();
+        txtNombres.clear();
+        txtApellidos.clear();
+        txtTelefono.clear();
+        txtCorreo.clear();
+        chkActivo.setSelected(true);
+
+        tblClientes.getSelectionModel().clearSelection();
+
+        btnGuardar.setDisable(false);
+        btnActualizar.setDisable(true);
+        btnEliminar.setDisable(true);
+    }
+
+    /**
+     * Valida los campos obligatorios, longitudes máximas y formato de correo electrónico (RF07).
+     * Aplica animación de sacudida (JavaFX shake) en el campo que falle.
+     */
+    private boolean validarFormulario(boolean esEdicion) {
+        String nombres = txtNombres.getText() != null ? txtNombres.getText().trim() : "";
+        String apellidos = txtApellidos.getText() != null ? txtApellidos.getText().trim() : "";
+        String telefono = txtTelefono.getText() != null ? txtTelefono.getText().trim() : "";
+        String correo = txtCorreo.getText() != null ? txtCorreo.getText().trim() : "";
+
+        if (nombres.isEmpty()) {
+            animarError(txtNombres);
+            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Nombres' es obligatorio.");
+            txtNombres.requestFocus();
+            return false;
+        }
+        if (nombres.length() > 80) {
+            animarError(txtNombres);
+            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Nombres' no puede exceder 80 caracteres.");
+            txtNombres.requestFocus();
+            return false;
+        }
+
+        if (apellidos.isEmpty()) {
+            animarError(txtApellidos);
+            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Apellidos' es obligatorio.");
+            txtApellidos.requestFocus();
+            return false;
+        }
+        if (apellidos.length() > 80) {
+            animarError(txtApellidos);
+            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Apellidos' no puede exceder 80 caracteres.");
+            txtApellidos.requestFocus();
+            return false;
+        }
+
+        if (telefono.isEmpty()) {
+            animarError(txtTelefono);
+            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Teléfono' es obligatorio.");
+            txtTelefono.requestFocus();
+            return false;
+        }
+        if (telefono.length() > 20) {
+            animarError(txtTelefono);
+            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Teléfono' no puede exceder 20 caracteres.");
+            txtTelefono.requestFocus();
+            return false;
+        }
+
+        if (correo.isEmpty()) {
+            animarError(txtCorreo);
+            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Correo' es obligatorio.");
+            txtCorreo.requestFocus();
+            return false;
+        }
+        if (correo.length() > 120) {
+            animarError(txtCorreo);
+            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Correo' no puede exceder 120 caracteres.");
+            txtCorreo.requestFocus();
+            return false;
+        }
+
+        if (!EMAIL_PATTERN.matcher(correo).matches()) {
+            animarError(txtCorreo);
+            mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido", "El formato del correo electrónico no es válido. Ejemplo: usuario@dominio.com");
+            txtCorreo.requestFocus();
+            return false;
+        }
+
+        int idExcluir = esEdicion ? Integer.parseInt(txtId.getText().trim()) : 0;
+        if (clienteDAO.existeCorreo(correo, idExcluir)) {
+            animarError(txtCorreo);
+            mostrarAlerta(Alert.AlertType.WARNING, "Correo Duplicado", "Ya existe un cliente registrado con el correo: " + correo);
+            txtCorreo.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
+
+    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
+        Alert alerta = new Alert(tipo);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText(mensaje);
+        alerta.showAndWait();
     }
 
     @FXML

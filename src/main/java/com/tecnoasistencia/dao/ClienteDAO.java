@@ -98,7 +98,25 @@ public class ClienteDAO {
             System.err.println("Error al eliminar cliente: " + e.getMessage());
             return false;
         }
+    }
 
+    public boolean existeCorreo(String correo, int idExcluir) {
+        String sql = "SELECT COUNT(*) FROM cliente WHERE LOWER(correo) = LOWER(?) AND id <> ?";
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, correo.trim());
+            pstmt.setInt(2, idExcluir);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al verificar existencia de correo: " + e.getMessage());
+        }
+        return false;
     }
 
 }
