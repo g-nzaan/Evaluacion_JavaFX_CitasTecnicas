@@ -175,6 +175,7 @@ public class ClienteController implements Initializable {
         configurarAnimacionesJavaFX();
         configurarColumnasTabla();
         configurarSeleccionTabla();
+        configurarBusqueda();
         cargarClientes();
     }
 
@@ -662,11 +663,43 @@ public class ClienteController implements Initializable {
         }
     }
 
-    @FXML
-    private void handleBuscar(ActionEvent event) {
+    /**
+     * Configura el listener dinámico en el campo de texto de búsqueda para filtrar en tiempo real (RF05).
+     */
+    private void configurarBusqueda() {
+        txtBuscar.textProperty().addListener((observable, oldValue, newValue) -> {
+            ejecutarBusqueda(newValue);
+        });
     }
 
+    /**
+     * Ejecuta la consulta de búsqueda de clientes mediante ClienteDAO (RF05).
+     */
+    private void ejecutarBusqueda(String criterio) {
+        if (criterio == null || criterio.trim().isEmpty()) {
+            cargarClientes();
+        } else {
+            listaClientes = clienteDAO.buscarClientes(criterio);
+            tblClientes.setItems(listaClientes);
+            actualizarContador(listaClientes.size());
+            animarCargaTabla();
+        }
+    }
+
+    /**
+     * Manejador del botón Buscar (RF05).
+     */
+    @FXML
+    private void handleBuscar(ActionEvent event) {
+        ejecutarBusqueda(txtBuscar.getText());
+    }
+
+    /**
+     * Manejador del botón Restablecer/Limpiar búsqueda (RF05, RF06).
+     */
     @FXML
     private void handleLimpiarBusqueda(ActionEvent event) {
+        txtBuscar.clear();
+        cargarClientes();
     }
 }
