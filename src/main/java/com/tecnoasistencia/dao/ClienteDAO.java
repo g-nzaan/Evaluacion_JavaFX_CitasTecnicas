@@ -136,4 +136,44 @@ public class ClienteDAO {
         return false;
     }
 
+    /**
+     * Busca clientes por coincidencia parcial en nombres, apellidos o correo
+     * sin distinguir mayúsculas ni minúsculas usando PreparedStatement (RF05).
+     *
+     * @param criterio Texto o término a buscar.
+     * @return ObservableList de clientes que coinciden con el criterio.
+     */
+    public ObservableList<Cliente> buscarClientes(String criterio) {
+        ObservableList<Cliente> listaResultado = FXCollections.observableArrayList();
+        String sql = "SELECT id, nombres, apellidos, telefono, correo, activo FROM cliente "
+                   + "WHERE LOWER(nombres) LIKE ? OR LOWER(apellidos) LIKE ? OR LOWER(correo) LIKE ? "
+                   + "ORDER BY id ASC";
+
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            String parametro = "%" + (criterio == null ? "" : criterio.trim().toLowerCase()) + "%";
+            pstmt.setString(1, parametro);
+            pstmt.setString(2, parametro);
+            pstmt.setString(3, parametro);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Cliente cliente = new Cliente(
+                            rs.getInt("id"),
+                            rs.getString("nombres"),
+                            rs.getString("apellidos"),
+                            rs.getString("telefono"),
+                            rs.getString("correo"),
+                            rs.getBoolean("activo")
+                    );
+                    listaResultado.add(cliente);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al buscar clientes: " + e.getMessage());
+        }
+        return listaResultado;
+    }
+
 }
