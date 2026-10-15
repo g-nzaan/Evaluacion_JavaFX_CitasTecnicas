@@ -1,6 +1,7 @@
 module com.tecnoasistencia {
     requires javafx.controls;
     requires javafx.fxml;
+    requires transitive javafx.graphics;
     requires java.sql;
     requires org.postgresql.jdbc;
 
