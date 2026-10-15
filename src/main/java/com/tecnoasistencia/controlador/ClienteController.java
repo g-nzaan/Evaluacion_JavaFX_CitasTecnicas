@@ -175,8 +175,22 @@ public class ClienteController implements Initializable {
         configurarAnimacionesJavaFX();
         configurarColumnasTabla();
         configurarSeleccionTabla();
+        configurarFiltrosEntrada();
         configurarBusqueda();
+        tblClientes.setPlaceholder(new Label("No se encontraron clientes registrados o que coincidan con la búsqueda."));
         cargarClientes();
+    }
+
+    /**
+     * Aplica filtros de entrada en tiempo real (TextFormatter) para evitar que el usuario
+     * ingrese números en nombres o letras en teléfonos, y bloquea desbordamiento de longitud.
+     */
+    private void configurarFiltrosEntrada() {
+        txtNombres.setTextFormatter(Validaciones.crearFiltroSoloLetras(80));
+        txtApellidos.setTextFormatter(Validaciones.crearFiltroSoloLetras(80));
+        txtTelefono.setTextFormatter(Validaciones.crearFiltroTelefono(20));
+        txtCorreo.setTextFormatter(Validaciones.crearFiltroLongitud(120));
+        txtBuscar.setTextFormatter(Validaciones.crearFiltroLongitud(80));
     }
 
     /**
@@ -462,9 +476,9 @@ public class ClienteController implements Initializable {
             return;
         }
 
-        String nombres = txtNombres.getText().trim();
-        String apellidos = txtApellidos.getText().trim();
-        String telefono = txtTelefono.getText().trim();
+        String nombres = Validaciones.validarNombreOApellido(txtNombres.getText(), "Nombres");
+        String apellidos = Validaciones.validarNombreOApellido(txtApellidos.getText(), "Apellidos");
+        String telefono = Validaciones.validarTelefono(txtTelefono.getText());
         String correo = txtCorreo.getText().trim();
         boolean activo = chkActivo.isSelected();
 
@@ -495,9 +509,9 @@ public class ClienteController implements Initializable {
         }
 
         int id = Integer.parseInt(txtId.getText().trim());
-        String nombres = txtNombres.getText().trim();
-        String apellidos = txtApellidos.getText().trim();
-        String telefono = txtTelefono.getText().trim();
+        String nombres = Validaciones.validarNombreOApellido(txtNombres.getText(), "Nombres");
+        String apellidos = Validaciones.validarNombreOApellido(txtApellidos.getText(), "Apellidos");
+        String telefono = Validaciones.validarTelefono(txtTelefono.getText());
         String correo = txtCorreo.getText().trim();
         boolean activo = chkActivo.isSelected();
 
@@ -542,50 +556,34 @@ public class ClienteController implements Initializable {
      */
     private boolean validarFormulario(boolean esEdicion) {
         try {
-            String nombres = txtNombres.getText() != null ? txtNombres.getText().trim() : "";
-            String apellidos = txtApellidos.getText() != null ? txtApellidos.getText().trim() : "";
-            String telefono = txtTelefono.getText() != null ? txtTelefono.getText().trim() : "";
+            try {
+                Validaciones.validarNombreOApellido(txtNombres.getText(), "Nombres");
+            } catch (IllegalArgumentException e) {
+                animarError(txtNombres);
+                mostrarAlerta(Alert.AlertType.WARNING, "Validación de Nombres", e.getMessage());
+                txtNombres.requestFocus();
+                return false;
+            }
+
+            try {
+                Validaciones.validarNombreOApellido(txtApellidos.getText(), "Apellidos");
+            } catch (IllegalArgumentException e) {
+                animarError(txtApellidos);
+                mostrarAlerta(Alert.AlertType.WARNING, "Validación de Apellidos", e.getMessage());
+                txtApellidos.requestFocus();
+                return false;
+            }
+
+            try {
+                Validaciones.validarTelefono(txtTelefono.getText());
+            } catch (IllegalArgumentException e) {
+                animarError(txtTelefono);
+                mostrarAlerta(Alert.AlertType.WARNING, "Validación de Teléfono", e.getMessage());
+                txtTelefono.requestFocus();
+                return false;
+            }
+
             String correo = txtCorreo.getText() != null ? txtCorreo.getText().trim() : "";
-
-            if (nombres.isEmpty()) {
-                animarError(txtNombres);
-                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Nombres' es obligatorio.");
-                txtNombres.requestFocus();
-                return false;
-            }
-            if (nombres.length() > 80) {
-                animarError(txtNombres);
-                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Nombres' no puede exceder 80 caracteres.");
-                txtNombres.requestFocus();
-                return false;
-            }
-
-            if (apellidos.isEmpty()) {
-                animarError(txtApellidos);
-                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Apellidos' es obligatorio.");
-                txtApellidos.requestFocus();
-                return false;
-            }
-            if (apellidos.length() > 80) {
-                animarError(txtApellidos);
-                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Apellidos' no puede exceder 80 caracteres.");
-                txtApellidos.requestFocus();
-                return false;
-            }
-
-            if (telefono.isEmpty()) {
-                animarError(txtTelefono);
-                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Teléfono' es obligatorio.");
-                txtTelefono.requestFocus();
-                return false;
-            }
-            if (telefono.length() > 20) {
-                animarError(txtTelefono);
-                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Teléfono' no puede exceder 20 caracteres.");
-                txtTelefono.requestFocus();
-                return false;
-            }
-
             if (correo.isEmpty()) {
                 animarError(txtCorreo);
                 mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Correo' es obligatorio.");
@@ -598,7 +596,6 @@ public class ClienteController implements Initializable {
                 txtCorreo.requestFocus();
                 return false;
             }
-
             if (!Validaciones.correoValido(correo)) {
                 animarError(txtCorreo);
                 mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido", "El formato del correo electrónico no es válido. Ejemplo: usuario@dominio.com");
