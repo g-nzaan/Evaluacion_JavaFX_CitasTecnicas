@@ -1,18 +1,25 @@
 package com.tecnoasistencia.controlador;
 
+import com.tecnoasistencia.dao.ClienteDAO;
 import com.tecnoasistencia.modelo.Cliente;
+import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -148,10 +155,88 @@ public class ClienteController implements Initializable {
     @FXML
     private Label lblContador;
 
+    private ClienteDAO clienteDAO;
+    private ObservableList<Cliente> listaClientes;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        clienteDAO = new ClienteDAO();
+        listaClientes = FXCollections.observableArrayList();
+
         configurarDisenoVisualJavaFX();
         configurarAnimacionesJavaFX();
+        configurarColumnasTabla();
+        cargarClientes();
+    }
+
+    /**
+     * Configura el enlace de datos (CellValueFactory) para cada columna del TableView
+     * y aplica formato con componentes nativos de JavaFX.
+     */
+    private void configurarColumnasTabla() {
+        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        colNombres.setCellValueFactory(new PropertyValueFactory<>("nombres"));
+        colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
+        colTelefono.setCellValueFactory(new PropertyValueFactory<>("telefono"));
+        colCorreo.setCellValueFactory(new PropertyValueFactory<>("correo"));
+        colActivo.setCellValueFactory(new PropertyValueFactory<>("activo"));
+
+        // Renderizado visual con etiquetas nativas de JavaFX
+        colActivo.setCellFactory(column -> new TableCell<Cliente, Boolean>() {
+            @Override
+            protected void updateItem(Boolean activo, boolean empty) {
+                super.updateItem(activo, empty);
+                if (empty || activo == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    Label badge = new Label(activo ? "Activo" : "Inactivo");
+                    badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+                    badge.setPadding(new Insets(3, 10, 3, 10));
+
+                    Color colorTexto = activo ? Color.web("#15803d") : Color.web("#b91c1c");
+                    Color colorFondo = activo ? Color.web("#dcfce7") : Color.web("#fee2e2");
+
+                    badge.setTextFill(colorTexto);
+                    badge.setBackground(new Background(new BackgroundFill(colorFondo, new CornerRadii(12), Insets.EMPTY)));
+
+                    setGraphic(badge);
+                    setText(null);
+                    setAlignment(Pos.CENTER);
+                }
+            }
+        });
+    }
+
+    /**
+     * Carga todos los clientes desde la base de datos a través de ClienteDAO
+     * y actualiza el TableView y el contador (RF02, RF09) con animación FadeTransition.
+     */
+    public void cargarClientes() {
+        listaClientes = clienteDAO.listarClientes();
+        tblClientes.setItems(listaClientes);
+        actualizarContador(listaClientes.size());
+        animarCargaTabla();
+    }
+
+    /**
+     * Animación de desvanecimiento suave (JavaFX FadeTransition) al refrescar el TableView.
+     */
+    private void animarCargaTabla() {
+        if (tblClientes == null) return;
+        FadeTransition ft = new FadeTransition(Duration.millis(300), tblClientes);
+        ft.setFromValue(0.4);
+        ft.setToValue(1.0);
+        ft.playFromStart();
+    }
+
+    /**
+     * Actualiza el contador de clientes en la interfaz.
+     */
+    private void actualizarContador(int total) {
+        if (lblContador != null) {
+            lblContador.setText("Total de clientes: " + total);
+        }
     }
 
     /**
