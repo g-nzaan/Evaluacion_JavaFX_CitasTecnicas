@@ -45,7 +45,8 @@ import javafx.util.Duration;
 import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
-import java.util.regex.Pattern;
+import com.tecnoasistencia.utilidad.Alertas;
+import com.tecnoasistencia.utilidad.Validaciones;
 
 /**
  * Controlador de la vista de clientes (cliente-view.fxml).
@@ -53,7 +54,6 @@ import java.util.regex.Pattern;
  */
 public class ClienteController implements Initializable {
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     @FXML
     private BorderPane rootPane;
@@ -223,10 +223,14 @@ public class ClienteController implements Initializable {
      * y actualiza el TableView y el contador (RF02, RF09) con animación FadeTransition.
      */
     public void cargarClientes() {
-        listaClientes = clienteDAO.listarClientes();
-        tblClientes.setItems(listaClientes);
-        actualizarContador(listaClientes.size());
-        animarCargaTabla();
+        try {
+            listaClientes = clienteDAO.listarClientes();
+            tblClientes.setItems(listaClientes);
+            actualizarContador(listaClientes.size());
+            animarCargaTabla();
+        } catch (IllegalStateException e) {
+            Alertas.errorDatos(e);
+        }
     }
 
     /**
@@ -537,87 +541,88 @@ public class ClienteController implements Initializable {
      * Aplica animación de sacudida (JavaFX shake) en el campo que falle.
      */
     private boolean validarFormulario(boolean esEdicion) {
-        String nombres = txtNombres.getText() != null ? txtNombres.getText().trim() : "";
-        String apellidos = txtApellidos.getText() != null ? txtApellidos.getText().trim() : "";
-        String telefono = txtTelefono.getText() != null ? txtTelefono.getText().trim() : "";
-        String correo = txtCorreo.getText() != null ? txtCorreo.getText().trim() : "";
+        try {
+            String nombres = txtNombres.getText() != null ? txtNombres.getText().trim() : "";
+            String apellidos = txtApellidos.getText() != null ? txtApellidos.getText().trim() : "";
+            String telefono = txtTelefono.getText() != null ? txtTelefono.getText().trim() : "";
+            String correo = txtCorreo.getText() != null ? txtCorreo.getText().trim() : "";
 
-        if (nombres.isEmpty()) {
-            animarError(txtNombres);
-            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Nombres' es obligatorio.");
-            txtNombres.requestFocus();
-            return false;
-        }
-        if (nombres.length() > 80) {
-            animarError(txtNombres);
-            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Nombres' no puede exceder 80 caracteres.");
-            txtNombres.requestFocus();
-            return false;
-        }
+            if (nombres.isEmpty()) {
+                animarError(txtNombres);
+                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Nombres' es obligatorio.");
+                txtNombres.requestFocus();
+                return false;
+            }
+            if (nombres.length() > 80) {
+                animarError(txtNombres);
+                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Nombres' no puede exceder 80 caracteres.");
+                txtNombres.requestFocus();
+                return false;
+            }
 
-        if (apellidos.isEmpty()) {
-            animarError(txtApellidos);
-            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Apellidos' es obligatorio.");
-            txtApellidos.requestFocus();
-            return false;
-        }
-        if (apellidos.length() > 80) {
-            animarError(txtApellidos);
-            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Apellidos' no puede exceder 80 caracteres.");
-            txtApellidos.requestFocus();
-            return false;
-        }
+            if (apellidos.isEmpty()) {
+                animarError(txtApellidos);
+                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Apellidos' es obligatorio.");
+                txtApellidos.requestFocus();
+                return false;
+            }
+            if (apellidos.length() > 80) {
+                animarError(txtApellidos);
+                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Apellidos' no puede exceder 80 caracteres.");
+                txtApellidos.requestFocus();
+                return false;
+            }
 
-        if (telefono.isEmpty()) {
-            animarError(txtTelefono);
-            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Teléfono' es obligatorio.");
-            txtTelefono.requestFocus();
-            return false;
-        }
-        if (telefono.length() > 20) {
-            animarError(txtTelefono);
-            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Teléfono' no puede exceder 20 caracteres.");
-            txtTelefono.requestFocus();
-            return false;
-        }
+            if (telefono.isEmpty()) {
+                animarError(txtTelefono);
+                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Teléfono' es obligatorio.");
+                txtTelefono.requestFocus();
+                return false;
+            }
+            if (telefono.length() > 20) {
+                animarError(txtTelefono);
+                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Teléfono' no puede exceder 20 caracteres.");
+                txtTelefono.requestFocus();
+                return false;
+            }
 
-        if (correo.isEmpty()) {
-            animarError(txtCorreo);
-            mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Correo' es obligatorio.");
-            txtCorreo.requestFocus();
-            return false;
-        }
-        if (correo.length() > 120) {
-            animarError(txtCorreo);
-            mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Correo' no puede exceder 120 caracteres.");
-            txtCorreo.requestFocus();
-            return false;
-        }
+            if (correo.isEmpty()) {
+                animarError(txtCorreo);
+                mostrarAlerta(Alert.AlertType.WARNING, "Campo Obligatorio", "El campo 'Correo' es obligatorio.");
+                txtCorreo.requestFocus();
+                return false;
+            }
+            if (correo.length() > 120) {
+                animarError(txtCorreo);
+                mostrarAlerta(Alert.AlertType.WARNING, "Longitud Excedida", "El campo 'Correo' no puede exceder 120 caracteres.");
+                txtCorreo.requestFocus();
+                return false;
+            }
 
-        if (!EMAIL_PATTERN.matcher(correo).matches()) {
-            animarError(txtCorreo);
-            mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido", "El formato del correo electrónico no es válido. Ejemplo: usuario@dominio.com");
-            txtCorreo.requestFocus();
+            if (!Validaciones.correoValido(correo)) {
+                animarError(txtCorreo);
+                mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido", "El formato del correo electrónico no es válido. Ejemplo: usuario@dominio.com");
+                txtCorreo.requestFocus();
+                return false;
+            }
+
+            int idExcluir = esEdicion ? Integer.parseInt(txtId.getText().trim()) : 0;
+            if (clienteDAO.existeCorreo(correo, idExcluir)) {
+                animarError(txtCorreo);
+                mostrarAlerta(Alert.AlertType.WARNING, "Correo Duplicado", "Ya existe un cliente registrado con el correo: " + correo);
+                txtCorreo.requestFocus();
+                return false;
+            }
+
+            return true;
+        } catch (IllegalStateException e) {
+            Alertas.errorDatos(e);
             return false;
         }
-
-        int idExcluir = esEdicion ? Integer.parseInt(txtId.getText().trim()) : 0;
-        if (clienteDAO.existeCorreo(correo, idExcluir)) {
-            animarError(txtCorreo);
-            mostrarAlerta(Alert.AlertType.WARNING, "Correo Duplicado", "Ya existe un cliente registrado con el correo: " + correo);
-            txtCorreo.requestFocus();
-            return false;
-        }
-
-        return true;
     }
 
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
-        Alert alerta = new Alert(tipo);
-        alerta.setTitle(titulo);
-        alerta.setHeaderText(null);
-        alerta.setContentText(mensaje);
-        alerta.showAndWait();
+        Alertas.mostrar(tipo, titulo, mensaje);
     }
 
     /**
@@ -626,40 +631,44 @@ public class ClienteController implements Initializable {
      */
     @FXML
     private void handleEliminar(ActionEvent event) {
-        if (txtId.getText() == null || txtId.getText().trim().isEmpty()) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Selección Requerida", "Debe seleccionar un cliente de la tabla para eliminarlo.");
-            return;
-        }
+        try {
+            if (txtId.getText() == null || txtId.getText().trim().isEmpty()) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Selección Requerida", "Debe seleccionar un cliente de la tabla para eliminarlo.");
+                return;
+            }
 
-        int id = Integer.parseInt(txtId.getText().trim());
-        String nombreCompleto = txtNombres.getText().trim() + " " + txtApellidos.getText().trim();
+            int id = Integer.parseInt(txtId.getText().trim());
+            String nombreCompleto = txtNombres.getText().trim() + " " + txtApellidos.getText().trim();
 
-        // Solicitar confirmación antes de eliminar (RF08)
-        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacion.setTitle("Confirmar Eliminación");
-        confirmacion.setHeaderText("¿Está seguro de eliminar al cliente?");
-        confirmacion.setContentText("Esta acción eliminará permanentemente al cliente '" + nombreCompleto + "'. ¿Desea continuar?");
+            // Solicitar confirmación antes de eliminar (RF08)
+            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmacion.setTitle("Confirmar Eliminación");
+            confirmacion.setHeaderText("¿Está seguro de eliminar al cliente?");
+            confirmacion.setContentText("Esta acción eliminará permanentemente al cliente '" + nombreCompleto + "'. ¿Desea continuar?");
 
-        Optional<ButtonType> respuesta = confirmacion.showAndWait();
-        if (respuesta.isEmpty() || respuesta.get() != ButtonType.OK) {
-            return;
-        }
+            Optional<ButtonType> respuesta = confirmacion.showAndWait();
+            if (respuesta.isEmpty() || respuesta.get() != ButtonType.OK) {
+                return;
+            }
 
-        // Restricción: No se permite eliminar un cliente que tenga citas técnicas asociadas (RF08)
-        if (clienteDAO.tieneCitasAsociadas(id)) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Eliminación Restringida",
-                    "No se puede eliminar el cliente '" + nombreCompleto + "' porque tiene citas técnicas registradas en el sistema.\n\n"
-                    + "Para proceder con la eliminación física del cliente, primero debe cancelar o eliminar las citas técnicas asociadas.");
-            return;
-        }
+            // Restricción: No se permite eliminar un cliente que tenga citas técnicas asociadas (RF08)
+            if (clienteDAO.tieneCitasAsociadas(id)) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Eliminación Restringida",
+                        "No se puede eliminar el cliente '" + nombreCompleto + "' porque tiene citas técnicas registradas en el sistema.\n\n"
+                                + "Para proceder con la eliminación física del cliente, primero debe eliminar las citas técnicas asociadas; cancelarlas no elimina la relación.");
+                return;
+            }
 
-        boolean eliminado = clienteDAO.eliminarCliente(id);
-        if (eliminado) {
-            mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente eliminado exitosamente.");
-            limpiarFormulario();
-            cargarClientes();
-        } else {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Eliminación", "No se pudo eliminar el cliente. Ocurrió un error en la base de datos.");
+            boolean eliminado = clienteDAO.eliminarCliente(id);
+            if (eliminado) {
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente eliminado exitosamente.");
+                limpiarFormulario();
+                cargarClientes();
+            } else {
+                mostrarAlerta(Alert.AlertType.ERROR, "Error de Eliminación", "No se pudo eliminar el cliente. Ocurrió un error en la base de datos.");
+            }
+        } catch (IllegalStateException e) {
+            Alertas.errorDatos(e);
         }
     }
 
@@ -676,13 +685,17 @@ public class ClienteController implements Initializable {
      * Ejecuta la consulta de búsqueda de clientes mediante ClienteDAO (RF05).
      */
     private void ejecutarBusqueda(String criterio) {
-        if (criterio == null || criterio.trim().isEmpty()) {
-            cargarClientes();
-        } else {
-            listaClientes = clienteDAO.buscarClientes(criterio);
-            tblClientes.setItems(listaClientes);
-            actualizarContador(listaClientes.size());
-            animarCargaTabla();
+        try {
+            if (criterio == null || criterio.trim().isEmpty()) {
+                cargarClientes();
+            } else {
+                listaClientes = clienteDAO.buscarClientes(criterio);
+                tblClientes.setItems(listaClientes);
+                actualizarContador(listaClientes.size());
+                animarCargaTabla();
+            }
+        } catch (IllegalStateException e) {
+            Alertas.errorDatos(e);
         }
     }
 
@@ -703,3 +716,4 @@ public class ClienteController implements Initializable {
         cargarClientes();
     }
 }
+```
