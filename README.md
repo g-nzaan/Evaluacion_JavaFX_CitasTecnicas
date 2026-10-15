@@ -7,8 +7,8 @@ Sistema de gestión de citas de atención técnica — JavaFX y JDBC (PostgreSQL
 | :--- | :--- | :--- | :--- |
 | Andrés Sebastián González Maradiaga | [g-nzaan](https://github.com/g-nzaan) | Integrante 1 | Conexión JDBC centralizada, Modelo Cliente, CRUD ClienteDAO y validación de eliminación. |
 | William Antonio García García | [Wigar03](https://github.com/Wigar03) | Integrante 2 | Interfaz gráfica FXML/TableView de Clientes, enlace de datos con ClienteDAO, formulario CRUD, validaciones y búsqueda dinámica (RF02, RF05, RF08, RF09). |
-| Rafael Hernández Sánchez | [rafaelhs07](https://github.com/rafaelhs07) | Integrante 3 | Modelo y DAO de Citas Técnicas, relación Cliente-Citas y filtros. |
-| Caleb Jordan Tardencilla Alvarado | [CTardencilla](https://github.com/CTardencilla) | Integrante 4 | Interfaz gráfica FXML de Citas Técnicas, validaciones y reglas de negocio. |
+|  Caleb Jordan Tardencilla Alvarado | [CTardencilla](https://github.com/CTardencilla) | Integrante 3 | Modelo y DAO de Citas Técnicas, relación Cliente-Citas y filtros. |
+| Rafael Hernández Sánchez | [rafaelhs07](https://github.com/rafaelhs07)  | Integrante 4 | Interfaz gráfica FXML de Citas Técnicas, validaciones y reglas de negocio. |
 
 ## Requisitos y Configuración de PostgreSQL
 
