@@ -16,6 +16,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
@@ -42,6 +43,7 @@ import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
 
 import java.net.URL;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
@@ -615,6 +617,49 @@ public class ClienteController implements Initializable {
         alerta.setHeaderText(null);
         alerta.setContentText(mensaje);
         alerta.showAndWait();
+    }
+
+    /**
+     * Elimina físicamente un cliente tras confirmación obligatoria (RF02, RF08).
+     * Previene la eliminación si el cliente tiene citas técnicas asociadas e informa el motivo.
+     */
+    @FXML
+    private void handleEliminar(ActionEvent event) {
+        if (txtId.getText() == null || txtId.getText().trim().isEmpty()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Selección Requerida", "Debe seleccionar un cliente de la tabla para eliminarlo.");
+            return;
+        }
+
+        int id = Integer.parseInt(txtId.getText().trim());
+        String nombreCompleto = txtNombres.getText().trim() + " " + txtApellidos.getText().trim();
+
+        // Solicitar confirmación antes de eliminar (RF08)
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Confirmar Eliminación");
+        confirmacion.setHeaderText("¿Está seguro de eliminar al cliente?");
+        confirmacion.setContentText("Esta acción eliminará permanentemente al cliente '" + nombreCompleto + "'. ¿Desea continuar?");
+
+        Optional<ButtonType> respuesta = confirmacion.showAndWait();
+        if (respuesta.isEmpty() || respuesta.get() != ButtonType.OK) {
+            return;
+        }
+
+        // Restricción: No se permite eliminar un cliente que tenga citas técnicas asociadas (RF08)
+        if (clienteDAO.tieneCitasAsociadas(id)) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Eliminación Restringida",
+                    "No se puede eliminar el cliente '" + nombreCompleto + "' porque tiene citas técnicas registradas en el sistema.\n\n"
+                    + "Para proceder con la eliminación física del cliente, primero debe cancelar o eliminar las citas técnicas asociadas.");
+            return;
+        }
+
+        boolean eliminado = clienteDAO.eliminarCliente(id);
+        if (eliminado) {
+            mostrarAlerta(Alert.AlertType.INFORMATION, "Operación Exitosa", "Cliente eliminado exitosamente.");
+            limpiarFormulario();
+            cargarClientes();
+        } else {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Eliminación", "No se pudo eliminar el cliente. Ocurrió un error en la base de datos.");
+        }
     }
 
     @FXML

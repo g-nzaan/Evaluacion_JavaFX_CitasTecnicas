@@ -119,4 +119,21 @@ public class ClienteDAO {
         return false;
     }
 
+    public boolean tieneCitasAsociadas(int clienteId) {
+        String sql = "SELECT COUNT(*) FROM cita_tecnica WHERE cliente_id = ?";
+        try (Connection conn = ConexionDB.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, clienteId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al verificar citas asociadas: " + e.getMessage());
+        }
+        return false;
+    }
+
 }
