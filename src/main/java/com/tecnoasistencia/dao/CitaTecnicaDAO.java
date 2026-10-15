@@ -6,6 +6,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Data Access Object (DAO) para la entidad CitaTecnica.
@@ -156,6 +158,23 @@ public class CitaTecnicaDAO {
             }
         }
         return null;
+    }
+
+    /**
+     * Verifica si ya existe una cita registrada para el mismo cliente en la misma fecha y hora (RF07).
+     */
+    public boolean existeCitaCliente(int clienteId, LocalDate fecha, LocalTime hora, int idExcluir) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM cita_tecnica WHERE cliente_id = ? AND fecha = ? AND hora = ? AND id <> ?";
+        try (Connection conn = abrirConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, clienteId);
+            ps.setDate(2, Date.valueOf(fecha));
+            ps.setTime(3, Time.valueOf(hora));
+            ps.setInt(4, idExcluir);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
     }
 
     private void asignarParametros(PreparedStatement ps, CitaTecnica cita) throws SQLException {

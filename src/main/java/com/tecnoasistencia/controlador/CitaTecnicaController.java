@@ -67,6 +67,23 @@ public class CitaTecnicaController {
         dpFecha.setEditable(false);
         dpFiltroFecha.setEditable(false);
 
+        // Deshabilitar fechas pasadas en el selector visual para nuevas citas
+        dpFecha.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (idSeleccionado == 0 && date != null && date.isBefore(LocalDate.now())) {
+                    setDisable(true);
+                    setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #94a3b8;");
+                }
+            }
+        });
+
+        // Filtros de entrada física en tiempo real para evitar desbordamientos
+        txtHora.setTextFormatter(Validaciones.crearFiltroLongitud(5));
+        txtServicio.setTextFormatter(Validaciones.crearFiltroLongitud(80));
+        txtDescripcion.setTextFormatter(Validaciones.crearFiltroLongitud(255));
+
         cmbCliente.setCellFactory(lista -> celdaCliente());
         cmbCliente.setButtonCell(celdaCliente());
 
@@ -169,17 +186,25 @@ public class CitaTecnicaController {
         if (cliente == null) {
             throw new IllegalArgumentException("Debe seleccionar un cliente existente de la lista.");
         }
+
+        // Regla de negocio: No agendar nuevas citas a clientes inactivos
+        Validaciones.validarClienteParaCita(cliente, idSeleccionado != 0);
+
         if (dpFecha.getValue() == null) {
             throw new IllegalArgumentException("Seleccione la fecha de la cita.");
         }
 
         LocalTime hora = Validaciones.leerHora(txtHora.getText());
-        String servicio = Validaciones.textoObligatorio(txtServicio.getText(), "El tipo de servicio", 80);
-        String descripcion = Validaciones.textoObligatorio(txtDescripcion.getText(), "La descripción", 255);
 
         if (cmbEstado.getValue() == null || !Validaciones.ESTADOS.contains(cmbEstado.getValue())) {
             throw new IllegalArgumentException("Seleccione un estado válido (" + String.join(", ", Validaciones.ESTADOS) + ").");
         }
+
+        // Regla de negocio: No permitir fechas pasadas ni horas pasadas de hoy
+        Validaciones.validarFechaHoraCita(dpFecha.getValue(), hora, idSeleccionado != 0, cmbEstado.getValue());
+
+        String servicio = Validaciones.textoObligatorio(txtServicio.getText(), "El tipo de servicio", 3, 80);
+        String descripcion = Validaciones.textoObligatorio(txtDescripcion.getText(), "La descripción", 5, 255);
 
         return new CitaTecnica(
                 idSeleccionado,
@@ -210,6 +235,15 @@ public class CitaTecnicaController {
             }
 
             CitaTecnica cita = leerFormulario();
+
+            // Regla de negocio: Prevenir colisión de citas (doble cita al mismo cliente en la misma fecha y hora)
+            if (citaDAO.existeCitaCliente(cita.getClienteId(), cita.getFecha(), cita.getHora(), cita.getId())) {
+                Alertas.mostrar(Alert.AlertType.WARNING, "Conflicto de Horario",
+                        "El cliente '" + cita.getNombreCliente() + "' ya tiene una cita técnica agendada para el "
+                                + cita.getFechaFormateada() + " a las " + cita.getHoraFormateada()
+                                + ".\n\nPor favor asigne un horario o fecha diferente para evitar colisión de citas.");
+                return;
+            }
 
             String accion = actualizar ? "actualizar" : "registrar";
             String mensajeConfirmacion = "¿Desea " + accion + " la cita para el cliente "
